@@ -1,38 +1,80 @@
 import {useState} from "react";
+import Tippy from '@tippyjs/react';
+import { v4 as uuidv4 } from 'uuid';
+import 'tippy.js/dist/tippy.css';
+import 'tippy.js/themes/material.css';
+import 'tippy.js/animations/scale-subtle.css';
+import MoonLoader from "react-spinners/MoonLoader";
+
+type Note = {
+  id: string;
+  title: string;
+  content: string;
+}
 
 const MainView = () => {
-  const [notes, setNotes] = useState<{
-    id: number;
-    title: string;
-    content: string;
-  }[]>(localStorage.getItem("notes") ? JSON.parse(localStorage.getItem("notes")!) : []);
-
-  const [selectedNote, selectNote] = useState<{
-    id: number;
-    title: string;
-    content: string;
-  } | null>(null);
-
+  const [notes, setNotes] = useState<Note[]>(localStorage.getItem("notes") ? JSON.parse(localStorage.getItem("notes")!) : []);
+  const [selectedNote, selectNote] = useState<Note | null>(null);
   const [title, setTitle] = useState<string>(selectedNote?.title ?? "");
   const [content, setContent] = useState<string>(selectedNote?.content ?? "");
+  const [isSaved, setSaved] = useState<boolean>(true);
+  const [savedTimeout, setSavedTimeout] = useState<number | null>(null);
 
   function createNewNote() {
+    selectNote(null);
     setTitle("");
     setContent("");
-    selectNote(null);
+
+    document.getElementById("title-input")?.focus();
+  }
+
+  function isNoteExists(id: string) {
+    return notes.find((n) => n.id === id);
+  }
+
+  function saveNote(note: Note | null = null) {
+    const id = selectedNote?.id ?? uuidv4();
+    const newNote = note ?? {
+      id: id,
+      title,
+      content,
+    }
+
+    if (isNoteExists(id)) {
+      const updatedNotes = notes.map((n) => n.id === id ? newNote : n);
+      setNotes(updatedNotes);
+
+      localStorage.setItem("notes", JSON.stringify(updatedNotes));
+      selectNote(newNote);
+    } else {
+      setNotes([newNote, ...notes]);
+
+      localStorage.setItem("notes", JSON.stringify([newNote, ...notes]));
+      selectNote(newNote);
+    }
+  }
+
+  function deleteNote() {
+    if (selectedNote && isNoteExists(selectedNote.id)) {
+      const updatedNotes = notes.filter((n) => n.id !== selectedNote.id);
+      setNotes(updatedNotes);
+      localStorage.setItem("notes", JSON.stringify(updatedNotes));
+
+      selectNote(null);
+      setTitle("");
+      setContent("");
+    }
   }
 
   return (
     <div className={"flex mx-10 mt-10"}>
       <div className={"flex gap-5 rounded-md w-full"}>
-        <div className={"flex flex-col gap-6"}>
-          <button onClick={() => createNewNote()}
-                  className={"flex items-center bg-[#222327] hover:bg-[#2a2b2e] w-64 h-[36px] px-4 rounded-md gap-4"}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd"
-                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                    clipRule="evenodd"/>
-            </svg>
+        <div className={"flex flex-col gap-6 w-64"}>
+          <button
+            id={"new-note-button"}
+            onClick={() => createNewNote()}
+            className={"flex items-center text-sm font-medium bg-[#222327] hover:bg-[#2a2b2e] active:bg-[#4f5052] transition duration-200 w-fit h-[36px] px-3 pr-5 rounded-full gap-2"}>
+            <span className="material-symbols-outlined">add</span>
             New Note
           </button>
           {/* Notes */}
@@ -41,21 +83,17 @@ const MainView = () => {
             <div className={"flex flex-col gap-1"}>
               {
                 notes.map((note) => (
-                    <button
-                      onClick={() => {
-                        selectNote(notes.find((n) => n.id === note.id)!);
-                        setTitle(note.title);
-                        setContent(note.content);
-                      }}
-                       className={"flex items-center bg-[#222327] hover:bg-[#2a2b2e] w-64 h-[36px] px-4 rounded-md gap-4"}>
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                           className="w-5 h-5">
-                        <path fillRule="evenodd"
-                              d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z"
-                              clipRule="evenodd"/>
-                      </svg>
-                      {note.title}
-                    </button>
+                  <button
+                    key={note.id}
+                    onClick={() => {
+                      selectNote(notes.find((n) => n.id === note.id)!);
+                      setTitle(note.title);
+                      setContent(note.content);
+                    }}
+                    className={"flex items-center text-sm font-medium bg-[#222327] hover:bg-[#2a2b2e] active:bg-[#4f5052] transition duration-200 w-64 h-[36px] px-3 rounded-full gap-2"}>
+                    <span className="material-symbols-outlined">description</span>
+                    {note.title}
+                  </button>
                 ))
               }
             </div>
@@ -64,63 +102,116 @@ const MainView = () => {
 
         <div className={"grow"}>
           {/* Note form */}
-          <div className={"flex flex-col bg-[#222327] rounded-md"}>
-            <input className={"text-xl bg-transparent border-0 outline-none focus:ring-0 h-12 rounded-t-md"} type={"text"}
-                   placeholder={"Title"} value={title} onChange={(e) => setTitle(e.target.value)} />
-            <textarea className={"bg-transparent border-0 outline-none focus:ring-0 rounded-b-md"} rows={10}
-                      placeholder={"Type your notes here..."} value={content} onChange={(e) => setContent(e.target.value)}>
-            </textarea>
-          </div>
+          <div className={"flex flex-col bg-[#222327] rounded-md px-1 sticky top-10"}>
+            <input
+              id={"title-input"}
+              className={"text-xl bg-transparent placeholder-[rgba(255,255,255,0.6)] border-0 outline-none focus:ring-0 h-12 rounded-t-md"}
+              type={"text"}
+              placeholder={"Title"}
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
 
-          {/* Action buttons */}
-          <div className={"flex gap-2 mt-2"}>
-            {
-              selectedNote && (
-                <button
-                  onClick={() => {
-                    // Delete note
-                    if (selectedNote) {
-                      const index = notes.findIndex((n) => n.id === selectedNote.id);
-                      notes.splice(index, 1);
-                      setNotes([...notes]);
-                      localStorage.setItem("notes", JSON.stringify(notes));
-                      createNewNote();
-                    }
-                  }}
-                  className={"flex items-center bg-[#222327] hover:bg-[#2a2b2e] h-[36px] px-4 rounded-md gap-4"}>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-red-500">
-                    <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                  </svg>
-                  Delete
-                </button>
-              )
-            }
-            <button
-              onClick={() => {
-                // Save note
                 if (selectedNote) {
-                  const index = notes.findIndex((n) => n.id === selectedNote.id);
-                  notes[index] = {
-                    id: selectedNote.id,
-                    title,
-                    content,
-                  };
-                } else {
-                  notes.push({
-                    id: Math.floor(Math.random() * 1000000),
-                    title,
-                    content,
-                  });
+                  clearTimeout(savedTimeout!);
+                  setSaved(false);
+
+                  const timeoutId = setTimeout(() => {
+                    saveNote({
+                      id: selectedNote.id,
+                      title: e.target.value,
+                      content: selectedNote.content,
+                    });
+                    setSaved(true);
+                  }, 500);
+                  setSavedTimeout(timeoutId);
                 }
-                setNotes([...notes]);
-                localStorage.setItem("notes", JSON.stringify(notes));
-              }}
-              className={"flex items-center bg-[#222327] hover:bg-[#2a2b2e] h-[36px] px-4 rounded-md gap-4"}>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-500">
-                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-              </svg>
-              Save
-            </button>
+              }} />
+            <textarea
+              id={"content-input"}
+              className={"bg-transparent placeholder-[rgba(255,255,255,0.6)] border-0 outline-none focus:ring-0 rounded-b-md"}
+              rows={10}
+              placeholder={"Type your notes here..."}
+              value={content}
+              onChange={(e) => {
+                setContent(e.target.value);
+
+                if (selectedNote) {
+                  clearTimeout(savedTimeout!);
+                  setSaved(false);
+
+                  const timeoutId = setTimeout(() => {
+                    saveNote({
+                      id: selectedNote.id,
+                      title: selectedNote.title,
+                      content: e.target.value,
+                    });
+                    setSaved(true);
+                  }, 500);
+                  setSavedTimeout(timeoutId);
+                }
+              }}>
+            </textarea>
+
+            {/* Action buttons */}
+            <div className={"flex mt-5 mb-1 mx-2 gap-2"}>
+              <Tippy content="Save" delay={50} duration={150} animation={"scale-subtle"} placement={"bottom"}
+                     arrow={false}>
+                <button
+                  id={"save-button"}
+                  onClick={() => {
+                    clearTimeout(savedTimeout!);
+                    setSaved(false);
+
+                    const timeoutId = setTimeout(() => {
+                      saveNote();
+                      setSaved(true);
+                    }, 500);
+                    setSavedTimeout(timeoutId);
+                  }}
+                  className={"flex content-center justify-center items-center rounded-full hover:bg-[#303235] active:bg-[#4f5052] transition duration-200 w-9 h-[36px] px-4 gap-2"}>
+                  <span className="material-symbols-outlined text-[#bebebf]">save</span>
+                </button>
+              </Tippy>
+              {
+                selectedNote && (
+                  <Tippy content="Delete note" delay={50} duration={150} animation={"scale-subtle"} placement={"bottom"}
+                         arrow={false}>
+                    <button
+                      id={"delete-button"}
+                      onClick={() => deleteNote()}
+                      className={"flex content-center justify-center items-center rounded-full hover:bg-[#303235] active:bg-[#4f5052] transition duration-200 w-9 h-[36px] px-4 gap-2"}>
+                      <span className="material-symbols-outlined text-[#bebebf]">delete</span>
+                    </button>
+                  </Tippy>
+                )
+              }
+              <div className={"grow"} />
+
+              {
+                selectedNote && (
+                  <div className={"flex items-center gap-2"}>
+                    {
+                      isSaved ? (
+                        <>
+                          <span className="material-symbols-outlined text-[#bebebf]">auto_awesome</span><span
+                          className={"text-[#bebebf]"}>All changes saved</span>
+                        </>
+                      ) : (
+                        <>
+                          <MoonLoader
+                            color="#3e85ee"
+                            size={16}
+                            loading
+                          />
+                          <span className={"text-[#bebebf]"}>Saving...</span>
+                        </>
+                      )
+                    }
+                  </div>
+                )
+              }
+            </div>
           </div>
         </div>
       </div>
