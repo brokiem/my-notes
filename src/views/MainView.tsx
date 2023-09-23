@@ -90,7 +90,7 @@ const MainView = () => {
                       setTitle(note.title);
                       setContent(note.content);
                     }}
-                    className={"flex items-center text-sm font-medium bg-[#222327] hover:bg-[#2a2b2e] active:bg-[#4f5052] transition duration-200 w-64 h-[36px] px-3 rounded-full gap-2"}>
+                    className={"flex items-center text-sm font-medium bg-[#222327] hover:bg-[#2a2b2e] active:bg-[#4f5052] transition duration-200 w-64 h-[36px] px-3 rounded-full gap-2 truncate align-middle"}>
                     <span className="material-symbols-outlined">description</span>
                     {note.title}
                   </button>
