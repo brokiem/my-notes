@@ -21,6 +21,12 @@ const MainView = () => {
   const [savedTimeout, setSavedTimeout] = useState<number | null>(null);
 
   function createNewNote() {
+    if (selectedNote) {
+      clearTimeout(savedTimeout!);
+      saveNote();
+      setSaved(true);
+    }
+
     selectNote(null);
     setTitle("");
     setContent("");
