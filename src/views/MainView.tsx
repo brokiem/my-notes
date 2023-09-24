@@ -107,7 +107,7 @@ const MainView = () => {
                     const timeoutId = setTimeout(() => {
                       saveNote();
                       setSaved(true);
-                    }, 500);
+                    }, 200);
                     setSavedTimeout(timeoutId);
                   }}
                   className={"flex content-center justify-center items-center rounded-full hover:bg-[#303235] active:bg-[#4f5052] transition duration-200 w-9 h-[36px] px-4 gap-2"}>
