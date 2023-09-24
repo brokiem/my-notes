@@ -45,13 +45,13 @@ const MainView = () => {
       setNotes(updatedNotes);
 
       localStorage.setItem("notes", JSON.stringify(updatedNotes));
-      selectNote(newNote);
     } else {
       setNotes([newNote, ...notes]);
 
       localStorage.setItem("notes", JSON.stringify([newNote, ...notes]));
-      selectNote(newNote);
     }
+
+    selectNote(newNote);
   }
 
   function deleteNote() {
@@ -78,7 +78,16 @@ const MainView = () => {
             New Note
           </button>
           {/* Notes */}
-          <Notes notes={notes} selectNote={selectNote} setTitle={setTitle} setContent={setContent} />
+          <Notes
+            notes={notes}
+            selectNote={selectNote}
+            setTitle={setTitle}
+            setContent={setContent}
+            selectedNote={selectedNote}
+            savedTimeout={savedTimeout}
+            saveNote={saveNote}
+            setSaved={setSaved}
+          />
         </div>
 
         <div className={"grow"}>
@@ -152,7 +161,7 @@ const MainView = () => {
   );
 }
 
-function Notes({notes, selectNote, setTitle, setContent}: { notes: Note[], selectNote: (note: Note) => void, setTitle: (title: string) => void, setContent: (content: string) => void }) {
+function Notes({notes, selectNote, setTitle, setContent, selectedNote, savedTimeout, saveNote, setSaved}: { notes: Note[], selectNote: (note: Note) => void, setTitle: (title: string) => void, setContent: (content: string) => void, selectedNote: Note | null, savedTimeout: number | null, saveNote: () => void, setSaved: (saved: boolean) => void }) {
   return (
     <>
       <div>
@@ -163,11 +172,21 @@ function Notes({notes, selectNote, setTitle, setContent}: { notes: Note[], selec
               <button
                 key={note.id}
                 onClick={() => {
+                  if (selectedNote) {
+                    clearTimeout(savedTimeout!);
+                    saveNote();
+                    setSaved(true);
+                  }
+
                   selectNote(notes.find((n) => n.id === note.id)!);
                   setTitle(note.title);
                   setContent(note.content);
                 }}
-                className={"flex items-center text-sm font-medium bg-[#222327] hover:bg-[#2a2b2e] active:bg-[#4f5052] transition duration-200 w-64 h-[36px] px-3 rounded-full gap-2 truncate align-middle"}>
+                className={
+                selectedNote?.id === note.id ?
+                "flex items-center text-sm font-normal bg-[#0f5223] focus:bg-[#0f5223] transition duration-200 w-64 h-[36px] px-3 rounded-full gap-2 truncate align-middle"
+                :
+                "flex items-center text-sm font-normal bg-[#222327] hover:bg-[#2a2b2e] active:bg-[#4f5052] transition duration-200 w-64 h-[36px] px-3 rounded-full gap-2 truncate align-middle"}>
                 <span className="material-symbols-outlined">description</span>
                 {note.title}
               </button>
